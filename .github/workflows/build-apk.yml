@@ -41,10 +41,23 @@ jobs:
           test -f masa10_v10_work/settings.gradle.kts
           test -f masa10_v10_work/app/google-services.json
 
+      - name: AGP 9 için Kotlin ayarlarını düzelt
+        run: |
+          sed -i '/id("org.jetbrains.kotlin.android")/d' masa10_v10_work/build.gradle.kts
+          sed -i '/id("org.jetbrains.kotlin.android")/d' masa10_v10_work/app/build.gradle.kts
+
       - name: CI için Android SDK 36 kullan
         run: |
           sed -i 's/compileSdk = 37/compileSdk = 36/' masa10_v10_work/app/build.gradle.kts
           sed -i 's/targetSdk = 37/targetSdk = 36/' masa10_v10_work/app/build.gradle.kts
+
+      - name: Projeyi kontrol et
+        run: |
+          echo "===== ROOT BUILD.GRADLE.KTS ====="
+          cat masa10_v10_work/build.gradle.kts
+
+          echo "===== APP BUILD.GRADLE.KTS ====="
+          cat masa10_v10_work/app/build.gradle.kts
 
       - name: APK oluştur
         working-directory: masa10_v10_work
