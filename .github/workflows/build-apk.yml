@@ -69,16 +69,7 @@ jobs:
 
 
       # --------------------------------------------------
-      # 5. Gradle 8.7 Kurulumu
-      # --------------------------------------------------
-      - name: Gradle 8.7
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.7'
-
-
-      # --------------------------------------------------
-      # 6. Düzeltilmiş Masa10 ZIP'ini bul
+      # 5. Düzeltilmiş Masa10 ZIP'ini bul
       # --------------------------------------------------
       - name: Masa10 ZIP dosyasını bul
         shell: bash
@@ -105,7 +96,7 @@ jobs:
 
 
       # --------------------------------------------------
-      # 7. ZIP'i aç
+      # 6. ZIP'i aç
       # --------------------------------------------------
       - name: Masa10 projesini aç
         shell: bash
@@ -139,7 +130,7 @@ jobs:
 
 
       # --------------------------------------------------
-      # 8. AGP 9 / Kotlin düzeltmesi
+      # 7. AGP 9 / Kotlin düzeltmesi
       # --------------------------------------------------
       - name: AGP 9 Kotlin uyumluluğunu düzelt
         shell: bash
@@ -166,7 +157,7 @@ jobs:
 
 
       # --------------------------------------------------
-      # 9. SDK ayarlarını kontrol et
+      # 8. SDK ayarlarını kontrol et
       # --------------------------------------------------
       - name: Android SDK ayarlarını kontrol et
         shell: bash
@@ -190,7 +181,7 @@ jobs:
 
 
       # --------------------------------------------------
-      # 10. Google Services dosyasını kontrol et
+      # 9. Google Services dosyasını kontrol et
       # --------------------------------------------------
       - name: Firebase kontrolü
         shell: bash
@@ -207,7 +198,7 @@ jobs:
 
 
       # --------------------------------------------------
-      # 11. Doğrudan Gradle 8.7 ile Derle
+      # 10. Orijinal gradlew ile APK oluştur
       # --------------------------------------------------
       - name: APK oluştur
         working-directory: ${{ env.PROJECT_DIR }}
@@ -215,9 +206,10 @@ jobs:
         run: |
           set -eux
 
-          gradle --version
+          # Projenin içindeki gradlew dosyasına çalıştırma izni ver
+          chmod +x gradlew
 
-          gradle \
+          ./gradlew \
             --no-daemon \
             --stacktrace \
             --info \
@@ -225,7 +217,7 @@ jobs:
 
 
       # --------------------------------------------------
-      # 12. APK'yı kontrol et
+      # 11. APK'yı kontrol et
       # --------------------------------------------------
       - name: APK kontrol
         shell: bash
@@ -252,7 +244,7 @@ jobs:
 
 
       # --------------------------------------------------
-      # 13. APK'yı GitHub'dan indirilebilir yap
+      # 12. APK'yı GitHub'dan indirilebilir yap
       # --------------------------------------------------
       - name: APK yükle
         uses: actions/upload-artifact@v4
