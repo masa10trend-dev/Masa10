@@ -18,7 +18,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Unzip and Build with Compatibility Fix
+      - name: Unzip and Build with Error Dump
         run: |
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           cd unzipped_project
@@ -35,5 +35,11 @@ jobs:
           
           chmod +x ./gradlew
           
-          # Kotlin uyumsuzluklarını ve build cache sorunlarını bypass ederek derleyelim
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          # Hata durumunda log dosyasını ekrana yazdırıp çıkış yapacağız
+          ./gradlew assembleDebug --stacktrace || {
+            echo "=== GRADLE HATA DETAYLARI ==="
+            if [ -f "app/build/reports/problems/problems-report.html" ]; then
+              cat app/build/reports/problems/problems-report.html
+            fi
+            exit 1
+          }
