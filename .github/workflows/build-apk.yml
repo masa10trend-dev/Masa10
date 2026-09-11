@@ -18,21 +18,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # Proje klasörünü otomatik bulup içine girer, wrapper kurar ve build alır
-      - name: Find Project Directory and Build APK
+      # settings.gradle.kts dosyasını bulup otomatik olarak doğru klasöre geçer
+      - name: Locate Project and Build APK
         run: |
-          # build.gradle.kts dosyasının olduğu klasörü buluyoruz
-          BUILD_FILE=$(find . -name "build.gradle.kts" | head -n 1)
-          if [ -z "$BUILD_FILE" ]; then
-            echo "HATA: Proje dosyası bulunamadı!"
+          SETTINGS_FILE=$(find . -name "settings.gradle.kts" | head -n 1)
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "HATA: settings.gradle.kts bulunamadı!"
             exit 1
           fi
           
-          DIR=$(dirname "$BUILD_FILE")
-          echo "Proje dizini bulundu: $DIR"
+          DIR=$(dirname "$SETTINGS_FILE")
+          echo "Proje dizini: $DIR"
           cd "$DIR"
           
-          # Eğer gradlew yoksa oluştur
           if [ ! -f "./gradlew" ]; then
             gradle wrapper
           fi
@@ -40,7 +38,6 @@ jobs:
           chmod +x ./gradlew
           ./gradlew assembleDebug
 
-      # Üretilen APK'yı bulup kaydeder
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
