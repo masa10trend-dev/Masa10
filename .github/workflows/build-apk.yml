@@ -18,25 +18,17 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build and Capture Error
+      - name: Build inside subdirectory
         run: |
-          PROJECT_DIR=$(find . -name "build.gradle*" -not -path "*/.*" | head -n 1)
-          if [ -n "$PROJECT_DIR" ]; then
-            DIR=$(dirname "$PROJECT_DIR")
-            cd "$DIR"
-          fi
+          # Zip içinden çıkan üst klasöre girip derlemeyi başlatıyoruz
+          cd masa10_v10_work
           
           if [ ! -f "./gradlew" ]; then
             gradle wrapper
           fi
           
           chmod +x ./gradlew
-          
-          # Derleme hatasını yakalayıp detaylıca loglayalım
-          ./gradlew assembleDebug --stacktrace || {
-            echo "=== BUILD HATASI YAKALANDI ==="
-            exit 1
-          }
+          ./gradlew assembleDebug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
