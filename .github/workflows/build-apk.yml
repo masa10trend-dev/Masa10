@@ -2,63 +2,63 @@ name: Masa10 APK Build
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
-    name: Masa10 APK
     runs-on: ubuntu-latest
 
     steps:
-
-      - name: Projeyi indir
+      - name: Kodu indir
         uses: actions/checkout@v4
 
-      - name: Java 17
+      - name: Java 17 kur
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Android SDK
+      - name: Android SDK kur
         uses: android-actions/setup-android@v3
 
-      - name: Android SDK 37 ve Build Tools
+      - name: Android SDK 36 kur
         run: |
-          sdkmanager --install "platform-tools"
-          sdkmanager --install "platforms;android-37"
-          sdkmanager --install "build-tools;36.0.0"
-          yes | sdkmanager --licenses || true
-
-      - name: Masa10 ZIP dosyasını aç
-        run: |
-          mkdir -p extracted
-          unzip -q "Masa10_v10_Reklam_Paketleri_999_1999.zip" -d extracted
-
-      - name: Projeyi kontrol et
-        run: |
-          test -f extracted/masa10_v10_work/settings.gradle.kts
-          test -f extracted/masa10_v10_work/app/build.gradle.kts
-          test -f extracted/masa10_v10_work/app/google-services.json
-          echo "Masa10 Android projesi bulundu."
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Gradle 9.6.0 kur
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.6.0'
+          gradle-version: '9.6'
 
-      - name: Gradle ile APK oluştur
-        working-directory: extracted/masa10_v10_work
+      - name: Masa10 ZIP dosyasını aç
         run: |
-          gradle :app:assembleDebug --no-daemon --stacktrace
+          rm -rf masa10_v10_work
+          unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip
 
-      - name: APK dosyasını kontrol et
+          test -f masa10_v10_work/settings.gradle.kts
+          test -f masa10_v10_work/app/google-services.json
+
+      - name: CI için Android SDK 36 kullan
         run: |
-          ls -lh extracted/masa10_v10_work/app/build/outputs/apk/debug/
-          test -f extracted/masa10_v10_work/app/build/outputs/apk/debug/app-debug.apk
+          sed -i 's/compileSdk = 37/compileSdk = 36/' masa10_v10_work/app/build.gradle.kts
+          sed -i 's/targetSdk = 37/targetSdk = 36/' masa10_v10_work/app/build.gradle.kts
+
+      - name: APK oluştur
+        working-directory: masa10_v10_work
+        run: |
+          gradle --no-daemon --stacktrace :app:assembleDebug
+
+      - name: APK oluştu mu kontrol et
+        run: |
+          test -f masa10_v10_work/app/build/outputs/apk/debug/app-debug.apk
+          ls -lh masa10_v10_work/app/build/outputs/apk/debug/app-debug.apk
 
       - name: APK'yı GitHub'a yükle
         uses: actions/upload-artifact@v4
         with:
-          name: Masa10-APK
-          path: extracted/masa10_v10_work/app/build/outputs/apk/debug/app-debug.apk
+          name: Masa10-debug-apk
+          path: masa10_v10_work/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
