@@ -18,7 +18,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Unzip and Apply Plugin Fix
+      - name: Unzip and Clean Build
         run: |
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           cd unzipped_project
@@ -29,15 +29,18 @@ jobs:
             cd "$DIR"
           fi
           
-          # Kotlin versiyon çakışmasını önlemek için root build.gradle.kts dosyasına Kotlin plugin versiyonunu sabitliyoruz
-          if [ -f "build.gradle.kts" ]; then
-            echo "Root build.gradle.kts güncelleniyor..."
-            sed -i 's/plugins {/plugins {kotlin("android") version "1.9.24" apply false/g' build.gradle.kts || true
-          fi
-          
           if [ ! -f "./gradlew" ]; then
             gradle wrapper
           fi
           
           chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace
+          
+          # Çakışmaları önlemek için temiz derleme komutu
+          ./gradlew clean assembleDebug --stacktrace
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: masa10-debug-apk
+          path: |
+            **/build/outputs/apk/debug/*.apk
