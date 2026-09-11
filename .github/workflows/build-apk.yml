@@ -207,13 +207,19 @@ jobs:
 
 
       # --------------------------------------------------
-      # 11. Gradle Wrapper ile APK oluştur
+      # 11. Gradle Wrapper oluştur ve APK derle
       # --------------------------------------------------
       - name: APK oluştur
         working-directory: ${{ env.PROJECT_DIR }}
         shell: bash
         run: |
           set -eux
+
+          # ZIP içinde gradlew yoksa otomatik oluşturuyoruz
+          if [ ! -f "gradlew" ]; then
+            echo "Gradle wrapper bulunamadı, oluşturuluyor..."
+            gradle wrapper --gradle-version 8.7
+          fi
 
           chmod +x gradlew
 
