@@ -18,7 +18,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Force Build and Bypass Kotlin Check
+      - name: Downgrade Gradle and Build
         run: |
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           cd unzipped_project
@@ -29,18 +29,11 @@ jobs:
             cd "$DIR"
           fi
           
-          # Built-in Kotlin kontrolünü tamamen devre dışı bırakan özellik
-          echo "kotlin.android.disabled=true" >> gradle.properties
-          echo "android.useAndroidX=true" >> gradle.properties
-          
-          if [ ! -f "./gradlew" ]; then
-            gradle wrapper
-          fi
+          # Hatanın kaynağı olan yeni Gradle kuralını atlamak için sürümü 8.0'a sabitliyoruz
+          gradle wrapper --gradle-version 8.0
           
           chmod +x ./gradlew
-          
-          # Hata durumunda logların tamamını ekrana dökecek komut
-          ./gradlew assembleDebug --info || ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
