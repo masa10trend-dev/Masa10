@@ -18,13 +18,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Force Build with Stacktrace
+      - name: Build and Capture Error
         run: |
           PROJECT_DIR=$(find . -name "build.gradle*" -not -path "*/.*" | head -n 1)
-          
           if [ -n "$PROJECT_DIR" ]; then
             DIR=$(dirname "$PROJECT_DIR")
-            echo "Proje dizini: $DIR"
             cd "$DIR"
           fi
           
@@ -33,7 +31,12 @@ jobs:
           fi
           
           chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace
+          
+          # Derleme hatasını yakalayıp detaylıca loglayalım
+          ./gradlew assembleDebug --stacktrace || {
+            echo "=== BUILD HATASI YAKALANDI ==="
+            exit 1
+          }
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
