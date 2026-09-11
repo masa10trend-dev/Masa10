@@ -18,28 +18,24 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Unzip and Build Automatically
+      - name: Unzip and Build with Stacktrace
         run: |
-          echo "ZIP dosyası açılıyor..."
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
-          
           cd unzipped_project
           
-          # İçeriden çıkan doğru klasörü bulup içine girelim
           TARGET_FILE=$(find . -name "build.gradle*" -not -path "*/.*" | head -n 1)
           if [ -n "$TARGET_FILE" ]; then
             DIR=$(dirname "$TARGET_FILE")
             cd "$DIR"
           fi
           
-          echo "Çalışılan dizin: $(pwd)"
-          
           if [ ! -f "./gradlew" ]; then
             gradle wrapper
           fi
           
           chmod +x ./gradlew
-          ./gradlew assembleDebug
+          # Hatayı tüm çıplaklığıyla görebilmek için --stacktrace ve --info kullanıyoruz
+          ./gradlew assembleDebug --stacktrace --info
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
