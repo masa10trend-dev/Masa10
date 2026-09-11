@@ -3,77 +3,58 @@ name: Masa10 APK Build
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Kodu indir
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Java 17 kur
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Android SDK kur
+      - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Android SDK 36 kur
+      - name: Install Android SDK 37
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          sdkmanager "platforms;android-37" "build-tools;36.0.0"
 
-      - name: Gradle 9.6.0 kur
+      - name: Set up Gradle 9.6.0
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
 
-      - name: Masa10 ZIP dosyasını aç
+      - name: Extract Masa10 project
         run: |
           rm -rf masa10_v10_work
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip
-
           test -f masa10_v10_work/settings.gradle.kts
           test -f masa10_v10_work/app/google-services.json
 
-      - name: AGP 9 için Kotlin ayarlarını düzelt
+      - name: Verify compile SDK
         run: |
-          sed -i '/id("org.jetbrains.kotlin.android")/d' masa10_v10_work/build.gradle.kts
-          sed -i '/id("org.jetbrains.kotlin.android")/d' masa10_v10_work/app/build.gradle.kts
+          grep "compileSdk" masa10_v10_work/app/build.gradle.kts
+          grep "targetSdk" masa10_v10_work/app/build.gradle.kts
 
-      - name: AdBillingManager görünürlüğünü düzelt
-        run: |
-          find masa10_v10_work/app/src -type f -name "*.kt" -print0 | while IFS= read -r -d '' file
-          do
-            sed -i 's/private class AdBillingManager/class AdBillingManager/g' "$file"
-          done
-
-      - name: Android SDK sürümünü CI için ayarla
-        run: |
-          sed -i 's/compileSdk = 37/compileSdk = 36/' masa10_v10_work/app/build.gradle.kts
-          sed -i 's/targetSdk = 37/targetSdk = 36/' masa10_v10_work/app/build.gradle.kts
-
-      - name: AdBillingManager kontrolü
-        run: |
-          echo "AdBillingManager tanımları:"
-          grep -R -n "class AdBillingManager" masa10_v10_work/app/src || true
-
-      - name: APK oluştur
+      - name: Build debug APK
         working-directory: masa10_v10_work
         run: |
           gradle --no-daemon --stacktrace :app:assembleDebug
 
-      - name: APK oluştu mu kontrol et
+      - name: Verify APK
         run: |
           test -f masa10_v10_work/app/build/outputs/apk/debug/app-debug.apk
           ls -lh masa10_v10_work/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: APK'yı GitHub'a yükle
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Masa10-debug-apk
