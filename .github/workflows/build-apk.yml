@@ -18,7 +18,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Unzip, Patch and Build
+      - name: Unzip, Fix and Build
         run: |
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           cd unzipped_project
@@ -29,10 +29,8 @@ jobs:
             cd "$DIR"
           fi
           
-          # Kotlin android plugin çakışmasını engellemek için app/build.gradle.kts üzerindeki satırı düzenleyelim
-          if [ -f "app/build.gradle.kts" ]; then
-            sed -i 's/id("org.jetbrains.kotlin.android")/id("kotlin-android")/g' app/build.gradle.kts || true
-          fi
+          # Kotlin ve AGP built-in uyumsuzluğunu çözen anahtar ayar
+          echo "kotlin.android.build-tools.use-gradle=false" >> gradle.properties
           
           if [ ! -f "./gradlew" ]; then
             gradle wrapper
