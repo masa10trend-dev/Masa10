@@ -18,7 +18,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Unzip and Clean Build
+      - name: Unzip, Patch and Build
         run: |
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           cd unzipped_project
@@ -29,14 +29,17 @@ jobs:
             cd "$DIR"
           fi
           
+          # Kotlin android plugin çakışmasını engellemek için app/build.gradle.kts üzerindeki satırı düzenleyelim
+          if [ -f "app/build.gradle.kts" ]; then
+            sed -i 's/id("org.jetbrains.kotlin.android")/id("kotlin-android")/g' app/build.gradle.kts || true
+          fi
+          
           if [ ! -f "./gradlew" ]; then
             gradle wrapper
           fi
           
           chmod +x ./gradlew
-          
-          # Çakışmaları önlemek için temiz derleme komutu
-          ./gradlew clean assembleDebug --stacktrace
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
