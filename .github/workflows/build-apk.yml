@@ -12,6 +12,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # Deponun içinde hangi dosyalar/klasörler var görelim
+      - name: List files to check directory structure
+        run: ls -la
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -19,13 +23,13 @@ jobs:
           java-version: '17'
 
       - name: Make Gradlew executable
-        run: chmod +x ./masa10_v10_work/gradlew
+        run: chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./masa10_v10_work/gradlew assembleDebug
+        run: ./gradlew assembleDebug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: masa10-debug-apk
-          path: masa10_v10_work/app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
