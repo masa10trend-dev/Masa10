@@ -12,24 +12,29 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Deponun içinde hangi dosyalar/klasörler var görelim
-      - name: List files to check directory structure
-        run: ls -la
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Make Gradlew executable
-        run: chmod +x gradlew
+      # gradlew dosyasını repoda nerede olursa olsun otomatik bulur ve çalıştırır
+      - name: Find Gradlew and Build APK
+        run: |
+          GRADLEW_PATH=$(find . -name gradlew | head -n 1)
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "HATA: Repoda gradlew dosyası bulunamadı! Lütfen gradlew dosyasını GitHub'a yüklediğinizden emin olun."
+            exit 1
+          fi
+          echo "gradlew dosyası şurada bulundu: $GRADLEW_PATH"
+          DIR=$(dirname "$GRADLEW_PATH")
+          cd "$DIR"
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug
-
+      # Üretilen APK'yı otomatik bulup artifact olarak kaydeder
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: masa10-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: '**/app/build/outputs/apk/debug/app-debug.apk'
