@@ -18,13 +18,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.2'
-
-      - name: Unzip and Build
+      - name: Clean Cache and Build
         run: |
+          # 1. Bozuk olası gradle önbelleklerini temizle
+          rm -rf ~/.gradle/caches/ ~/.gradle/wrapper/
+          
+          # 2. Zip dosyasını aç ve proje dizinine in
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           cd unzipped_project
           
@@ -41,7 +40,9 @@ jobs:
           fi
           
           chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace -Pandroid.kotlin.version=1.9.24
+          
+          # 3. Kilitlenmeleri önlemek için --no-daemon ile derle
+          ./gradlew assembleDebug --no-daemon --stacktrace -Pandroid.kotlin.version=1.9.24
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
