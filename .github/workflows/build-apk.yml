@@ -18,9 +18,8 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Unzip, Fix Plugin Conflict and Build
+      - name: Unzip, Fix Built-in Kotlin and Build
         run: |
-          # 1. Zip dosyasını aç ve proje dizinine in
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           cd unzipped_project
           
@@ -30,11 +29,13 @@ jobs:
             cd "$DIR"
           fi
           
-          # 2. app/build.gradle.kts içindeki çakışan Kotlin eklenti tanımını temizle/yorum satırı yap
+          # AGP built-in Kotlin uyumsuzluğunu çözmek için sürüm tanımlıyoruz
+          echo "android.kotlin.version=1.9.24" >> gradle.properties
+          
+          # Çakışmaya neden olan manuel Kotlin eklenti satırlarını siliyoruz
           if [ -f "app/build.gradle.kts" ]; then
-            echo "Kotlin eklenti çakışması temizleniyor..."
-            sed -i '/org.jetbrains.kotlin.android/s/^/\/\//' app/build.gradle.kts
-            sed -i '/kotlin("android")/s/^/\/\//' app/build.gradle.kts
+            sed -i '/org.jetbrains.kotlin.android/d' app/build.gradle.kts
+            sed -i '/kotlin("android")/d' app/build.gradle.kts
           fi
           
           if [ ! -f "./gradlew" ]; then
@@ -42,8 +43,6 @@ jobs:
           fi
           
           chmod +x ./gradlew
-          
-          # 3. Derlemeyi başlat
           ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK Artifact
