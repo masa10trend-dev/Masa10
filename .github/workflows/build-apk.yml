@@ -18,7 +18,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Direct Build Fix
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Unzip and Build
         run: |
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           cd unzipped_project
@@ -29,21 +32,16 @@ jobs:
             cd "$DIR"
           fi
           
-          # Mevcut bozuk gradlew dosyalarını ve wrapper ayarlarını temizle
-          rm -rf gradle gradlew gradlew.bat
-          
-          # Gradle 8.2 kararlı sürümünü doğrudan indirip kuralım
-          sdkman_auto_answer=true
-          curl -s "https://services.gradle.org/distributions/gradle-8.2-bin.zip" -o gradle-8.2.zip
-          unzip -q gradle-8.2.zip
-          export PATH=$PWD/gradle-8.2/bin:$PATH
-          
-          # Kotlin eklenti çakışmasını önleyen gradle.properties ayarı
+          # Kotlin eklenti çakışmasını önleyen özellik
           echo "kotlin.android.build-tools.use-gradle=false" >> gradle.properties
           echo "android.useAndroidX=true" >> gradle.properties
           
-          # Kararlı gradle motoru ile derle
-          gradle assembleDebug --stacktrace
+          if [ ! -f "./gradlew" ]; then
+            gradle wrapper
+          fi
+          
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
