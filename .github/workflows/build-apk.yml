@@ -18,7 +18,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Unzip and Build with Stacktrace
+      - name: Unzip and Build with Full Details
         run: |
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           cd unzipped_project
@@ -34,12 +34,6 @@ jobs:
           fi
           
           chmod +x ./gradlew
-          # Hatayı tüm çıplaklığıyla görebilmek için --stacktrace ve --info kullanıyoruz
-          ./gradlew assembleDebug --stacktrace --info
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: masa10-debug-apk
-          path: |
-            **/build/outputs/apk/debug/*.apk
+          
+          # Hata mesajını kesmeden, tam detayıyla ve debug modunda çalıştırıyoruz
+          ./gradlew assembleDebug --debug --stacktrace
