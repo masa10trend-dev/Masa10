@@ -18,22 +18,21 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Dynamic Directory Build
+      - name: Unzip and Build Automatically
         run: |
-          echo "Mevcut dizin taranıyor..."
-          ls -la
+          echo "ZIP dosyası açılıyor..."
+          unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           
-          # Proje yapılandırma dosyasını nerede olursa olsun otomatik bulur
-          TARGET_FILE=$(find . -name "settings.gradle.kts" -o -name "build.gradle.kts" | head -n 1)
+          cd unzipped_project
           
-          if [ -z "$TARGET_FILE" ]; then
-            echo "HATA: Proje dosyası hiçbir dizinde bulunamadı!"
-            exit 1
+          # İçeriden çıkan doğru klasörü bulup içine girelim
+          TARGET_FILE=$(find . -name "build.gradle*" -not -path "*/.*" | head -n 1)
+          if [ -n "$TARGET_FILE" ]; then
+            DIR=$(dirname "$TARGET_FILE")
+            cd "$DIR"
           fi
           
-          DIR=$(dirname "$TARGET_FILE")
-          echo "Tespit edilen proje dizini: $DIR"
-          cd "$DIR"
+          echo "Çalışılan dizin: $(pwd)"
           
           if [ ! -f "./gradlew" ]; then
             gradle wrapper
