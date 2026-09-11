@@ -21,8 +21,6 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
-        with:
-          packages: ''
 
       - name: Install Android 17 SDK
         run: |
@@ -40,6 +38,11 @@ jobs:
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip
           test -f masa10_v10_work/settings.gradle.kts
           test -f masa10_v10_work/app/google-services.json
+
+      - name: Fix AGP 9 built-in Kotlin
+        run: |
+          sed -i '/id("org.jetbrains.kotlin.android")/d' masa10_v10_work/build.gradle.kts
+          sed -i '/id("org.jetbrains.kotlin.android")/d' masa10_v10_work/app/build.gradle.kts
 
       - name: Verify compile SDK
         run: |
