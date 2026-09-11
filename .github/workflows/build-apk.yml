@@ -18,23 +18,17 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # gradlew dosyasını repoda nerede olursa olsun otomatik bulur ve çalıştırır
-      - name: Find Gradlew and Build APK
+      # Gradlew dosyası eksik olsa bile saniyeler içinde oluşturup derlemeyi başlatır
+      - name: Generate Wrapper and Build APK
         run: |
-          GRADLEW_PATH=$(find . -name gradlew | head -n 1)
-          if [ -z "$GRADLEW_PATH" ]; then
-            echo "HATA: Repoda gradlew dosyası bulunamadı! Lütfen gradlew dosyasını GitHub'a yüklediğinizden emin olun."
-            exit 1
+          if [ ! -f "./gradlew" ]; then
+            gradle wrapper
           fi
-          echo "gradlew dosyası şurada bulundu: $GRADLEW_PATH"
-          DIR=$(dirname "$GRADLEW_PATH")
-          cd "$DIR"
           chmod +x ./gradlew
           ./gradlew assembleDebug
 
-      # Üretilen APK'yı otomatik bulup artifact olarak kaydeder
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: masa10-debug-apk
-          path: '**/app/build/outputs/apk/debug/app-debug.apk'
+          path: app/build/outputs/apk/debug/app-debug.apk
