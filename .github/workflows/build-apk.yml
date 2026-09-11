@@ -18,7 +18,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Unzip and Build with AGP-Kotlin Fix
+      - name: Unzip and Apply Plugin Fix
         run: |
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           cd unzipped_project
@@ -29,22 +29,15 @@ jobs:
             cd "$DIR"
           fi
           
-          # Kotlin ve AGP sürüm uyumsuzluklarını esnetmek için gradle.properties içine özellik ekleyelim
-          echo "android.useAndroidX=true" >> gradle.properties
-          echo "kotlin.code.style=official" >> gradle.properties
+          # Kotlin versiyon çakışmasını önlemek için root build.gradle.kts dosyasına Kotlin plugin versiyonunu sabitliyoruz
+          if [ -f "build.gradle.kts" ]; then
+            echo "Root build.gradle.kts güncelleniyor..."
+            sed -i 's/plugins {/plugins {kotlin("android") version "1.9.24" apply false/g' build.gradle.kts || true
+          fi
           
           if [ ! -f "./gradlew" ]; then
             gradle wrapper
           fi
           
           chmod +x ./gradlew
-          
-          # Derlemeyi hata toleranslı ve kararlı modda başlatıyoruz
-          ./gradlew assembleDebug --stacktrace --warning-mode all
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: masa10-debug-apk
-          path: |
-            **/build/outputs/apk/debug/*.apk
+          ./gradlew assembleDebug --stacktrace
