@@ -46,18 +46,22 @@ jobs:
           sed -i '/id("org.jetbrains.kotlin.android")/d' masa10_v10_work/build.gradle.kts
           sed -i '/id("org.jetbrains.kotlin.android")/d' masa10_v10_work/app/build.gradle.kts
 
-      - name: CI için Android SDK 36 kullan
+      - name: AdBillingManager görünürlüğünü düzelt
+        run: |
+          find masa10_v10_work/app/src -type f -name "*.kt" -print0 | while IFS= read -r -d '' file
+          do
+            sed -i 's/private class AdBillingManager/class AdBillingManager/g' "$file"
+          done
+
+      - name: Android SDK sürümünü CI için ayarla
         run: |
           sed -i 's/compileSdk = 37/compileSdk = 36/' masa10_v10_work/app/build.gradle.kts
           sed -i 's/targetSdk = 37/targetSdk = 36/' masa10_v10_work/app/build.gradle.kts
 
-      - name: Projeyi kontrol et
+      - name: AdBillingManager kontrolü
         run: |
-          echo "===== ROOT BUILD.GRADLE.KTS ====="
-          cat masa10_v10_work/build.gradle.kts
-
-          echo "===== APP BUILD.GRADLE.KTS ====="
-          cat masa10_v10_work/app/build.gradle.kts
+          echo "AdBillingManager tanımları:"
+          grep -R -n "class AdBillingManager" masa10_v10_work/app/src || true
 
       - name: APK oluştur
         working-directory: masa10_v10_work
