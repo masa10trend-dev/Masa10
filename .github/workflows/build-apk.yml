@@ -18,14 +18,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # gradlew dosyasının olduğu alt klasörün yolunu belirttik
       - name: Make Gradlew executable
-        run: chmod +x ./gradlew
-        working-directory: masa10_v10_work
+        run: chmod +x ./masa10_v10_work/gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug
-        working-directory: masa10_v10_work
+        run: ./masa10_v10_work/gradlew assembleDebug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
