@@ -18,8 +18,9 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Unzip, Fix and Build
+      - name: Prepare, Patch and Build APK
         run: |
+          # 1. Zip dosyasını açıp proje dizinine gir
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           cd unzipped_project
           
@@ -29,15 +30,27 @@ jobs:
             cd "$DIR"
           fi
           
-          # Kotlin ve AGP built-in uyumsuzluğunu çözen anahtar ayar
-          echo "kotlin.android.build-tools.use-gradle=false" >> gradle.properties
+          # 2. AGP ve Kotlin uyumsuzluk kısıtlamalarını esnet
+          cat << 'EOF' >> gradle.properties
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          kotlin.suppressOutOfDateCompilerWarning=true
+          EOF
           
           if [ ! -f "./gradlew" ]; then
             gradle wrapper
           fi
           
           chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace
+          
+          # 3. Derlemeyi başlat, hata olursa sadece kritik 20 satırı ekrana bas
+          ./gradlew assembleDebug --stacktrace > build.log 2>&1 || {
+            echo "================ GERÇEK HATA NEDENİ ================"
+            grep -E "e:|ERROR:|Caused by:|Plugin|FAILED|exception" build.log | tail -n 25
+            echo "===================================================="
+            exit 1
+          }
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
