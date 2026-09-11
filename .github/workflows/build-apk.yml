@@ -18,11 +18,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Gradle with Kotlin Fix
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          # AGP built-in kotlin hatasını bitiren zorunlu sürüm eşitlemesi
-          arguments: -Pandroid.kotlin.version=1.9.24
+          gradle-version: '8.2'
 
       - name: Unzip and Build
         run: |
@@ -38,7 +37,7 @@ jobs:
           echo "android.useAndroidX=true" >> gradle.properties
           
           if [ ! -f "./gradlew" ]; then
-            gradle wrapper
+            gradle wrapper --gradle-version 8.2
           fi
           
           chmod +x ./gradlew
