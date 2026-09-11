@@ -69,12 +69,12 @@ jobs:
 
 
       # --------------------------------------------------
-      # 5. Gradle 9.6.0
+      # 5. Gradle 8.7
       # --------------------------------------------------
-      - name: Gradle 9.6.0
+      - name: Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.6.0'
+          gradle-version: '8.7'
 
 
       # --------------------------------------------------
@@ -154,9 +154,6 @@ jobs:
 
           echo "App Gradle:"
           cat "$APP"
-
-          # AGP 9 built-in Kotlin kullanıyor.
-          # Eski Kotlin Android pluginini kaldırıyoruz.
 
           sed -i '/id("org.jetbrains.kotlin.android")/d' "$ROOT"
           sed -i '/id("org.jetbrains.kotlin.android")/d' "$APP"
