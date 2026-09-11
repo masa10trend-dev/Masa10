@@ -18,31 +18,22 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # Deponun içeriğini doğrudan terminale döküp görelim ve build alalım
-      - name: Direct Build Process
+      - name: Direct Build Process with Stacktrace
         run: |
-          echo "Mevcut dizindeki dosyalar:"
-          ls -la
+          # Gradlew dosyasını bul ve çalıştır, hata detayını göster (--stacktrace)
+          GRADLEW_FILE=$(find . -name "gradlew" | head -n 1)
           
-          # Eğer ana dizinde gradlew yoksa alt klasörlere bakmadan doğrudan gradle wrapper tetikle
-          if [ ! -f "./gradlew" ]; then
-            # Alt klasörde olma ihtimaline karşı ilk bulduğu gradle'ı çalıştırılabilir yap
-            find . -name "gradlew" -exec chmod +x {} \;
-            GRADLEW_FILE=$(find . -name "gradlew" | head -n 1)
-            
-            if [ -n "$GRADLEW_FILE" ]; then
-              DIR=$(dirname "$GRADLEW_FILE")
-              cd "$DIR"
-              ./gradlew assembleDebug
-            else
-              echo "Gradlew hiç bulunamadı, sistem üzerinden derleniyor..."
-              gradle wrapper
-              chmod +x ./gradlew
-              ./gradlew assembleDebug
-            fi
-          else
+          if [ -n "$GRADLEW_FILE" ]; then
+            DIR=$(dirname "$GRADLEW_FILE")
+            echo "Çalıştırılan dizin: $DIR"
+            cd "$DIR"
             chmod +x ./gradlew
-            ./gradlew assembleDebug
+            ./gradlew assembleDebug --stacktrace
+          else
+            echo "Gradlew bulunamadı, yeniden oluşturuluyor..."
+            gradle wrapper
+            chmod +x ./gradlew
+            ./gradlew assembleDebug --stacktrace
           fi
 
       - name: Upload APK Artifact
