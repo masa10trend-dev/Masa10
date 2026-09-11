@@ -18,21 +18,24 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build from Correct Root Directory
+      # Depodaki tüm dosyaları listeler ve derlemeyi en üst düzeyde zorlar
+      - name: Force Build
         run: |
-          # Doğrudan settings dosyasını arayıp projenin gerçek kalbine iniyoruz
-          SETTINGS_FILE=$(find . -name "settings.gradle.kts" -o -name "settings.gradle" | head -n 1)
+          echo "Repodaki tüm dosya ve klasörler:"
+          find . -maxdepth 3
           
-          if [ -z "$SETTINGS_FILE" ]; then
-            echo "HATA: settings.gradle dosyası hiçbir yerde bulunamadı!"
-            exit 1
+          # Eğer alt klasörde kaldıysa, build.gradle veya build.gradle.kts içeren ilk klasöre gir
+          PROJECT_DIR=$(find . -name "build.gradle*" -not -path "*/.*" | head -n 1)
+          
+          if [ -n "$PROJECT_DIR" ]; then
+            DIR=$(dirname "$PROJECT_DIR")
+            echo "Bulunan proje klasörüne giriliyor: $DIR"
+            cd "$DIR"
+          else
+            echo "Proje dosyası bulunamadı, mevcut dizinde devam ediliyor."
           fi
           
-          DIR=$(dirname "$SETTINGS_FILE")
-          echo "Gerçek proje kök dizini: $DIR"
-          cd "$DIR"
-          
-          # Eğer bu dizinde gradlew yoksa hemen oluşturalım
+          # Wrapper yoksa oluştur
           if [ ! -f "./gradlew" ]; then
             gradle wrapper
           fi
