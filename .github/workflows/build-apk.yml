@@ -18,30 +18,22 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # Depodaki tüm dosyaları listeler ve derlemeyi en üst düzeyde zorlar
-      - name: Force Build
+      - name: Force Build with Stacktrace
         run: |
-          echo "Repodaki tüm dosya ve klasörler:"
-          find . -maxdepth 3
-          
-          # Eğer alt klasörde kaldıysa, build.gradle veya build.gradle.kts içeren ilk klasöre gir
           PROJECT_DIR=$(find . -name "build.gradle*" -not -path "*/.*" | head -n 1)
           
           if [ -n "$PROJECT_DIR" ]; then
             DIR=$(dirname "$PROJECT_DIR")
-            echo "Bulunan proje klasörüne giriliyor: $DIR"
+            echo "Proje dizini: $DIR"
             cd "$DIR"
-          else
-            echo "Proje dosyası bulunamadı, mevcut dizinde devam ediliyor."
           fi
           
-          # Wrapper yoksa oluştur
           if [ ! -f "./gradlew" ]; then
             gradle wrapper
           fi
           
           chmod +x ./gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
