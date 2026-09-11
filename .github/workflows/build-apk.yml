@@ -18,8 +18,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Gradle
+      - name: Setup Gradle with Kotlin Fix
         uses: gradle/actions/setup-gradle@v3
+        with:
+          # AGP built-in kotlin hatasını bitiren zorunlu sürüm eşitlemesi
+          arguments: -Pandroid.kotlin.version=1.9.24
 
       - name: Unzip and Build
         run: |
@@ -32,8 +35,6 @@ jobs:
             cd "$DIR"
           fi
           
-          # Kotlin eklenti çakışmasını önleyen özellik
-          echo "kotlin.android.build-tools.use-gradle=false" >> gradle.properties
           echo "android.useAndroidX=true" >> gradle.properties
           
           if [ ! -f "./gradlew" ]; then
@@ -41,7 +42,7 @@ jobs:
           fi
           
           chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --stacktrace -Pandroid.kotlin.version=1.9.24
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
