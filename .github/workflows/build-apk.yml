@@ -2,8 +2,6 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ "main" ] # Projenin ana dalı (master veya main)
-  pull_request:
     branches: [ "main" ]
 
 jobs:
@@ -11,28 +9,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Projeyi GitHub runner'a çek
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Java JDK Kurulumu (Android projeleri için genelde Java 17 idealdir)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. Gradlew dosyasına Linux ortamında çalıştırma yetkisi ver
+      # gradlew dosyasının olduğu alt klasörün yolunu belirttik
       - name: Make Gradlew executable
         run: chmod +x ./gradlew
+        working-directory: masa10_v10_work
 
-      # 4. Debug APK Oluştur (Proje kök dizininde gradlew olduğu için doğrudan çalışır)
       - name: Build Debug APK
         run: ./gradlew assembleDebug
+        working-directory: masa10_v10_work
 
-      # 5. Üretilen APK dosyasını GitHub Actions Artifacts olarak kaydet
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: masa10-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: masa10_v10_work/app/build/outputs/apk/debug/app-debug.apk
