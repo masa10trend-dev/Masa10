@@ -18,10 +18,22 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build inside subdirectory
+      - name: Dynamic Directory Build
         run: |
-          # Zip içinden çıkan üst klasöre girip derlemeyi başlatıyoruz
-          cd masa10_v10_work
+          echo "Mevcut dizin taranıyor..."
+          ls -la
+          
+          # Proje yapılandırma dosyasını nerede olursa olsun otomatik bulur
+          TARGET_FILE=$(find . -name "settings.gradle.kts" -o -name "build.gradle.kts" | head -n 1)
+          
+          if [ -z "$TARGET_FILE" ]; then
+            echo "HATA: Proje dosyası hiçbir dizinde bulunamadı!"
+            exit 1
+          fi
+          
+          DIR=$(dirname "$TARGET_FILE")
+          echo "Tespit edilen proje dizini: $DIR"
+          cd "$DIR"
           
           if [ ! -f "./gradlew" ]; then
             gradle wrapper
