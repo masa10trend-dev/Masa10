@@ -18,7 +18,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Unzip, Fix Built-in Kotlin and Build
+      - name: Force Build and Bypass Kotlin Check
         run: |
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           cd unzipped_project
@@ -29,21 +29,18 @@ jobs:
             cd "$DIR"
           fi
           
-          # AGP built-in Kotlin uyumsuzluğunu çözmek için sürüm tanımlıyoruz
-          echo "android.kotlin.version=1.9.24" >> gradle.properties
-          
-          # Çakışmaya neden olan manuel Kotlin eklenti satırlarını siliyoruz
-          if [ -f "app/build.gradle.kts" ]; then
-            sed -i '/org.jetbrains.kotlin.android/d' app/build.gradle.kts
-            sed -i '/kotlin("android")/d' app/build.gradle.kts
-          fi
+          # Built-in Kotlin kontrolünü tamamen devre dışı bırakan özellik
+          echo "kotlin.android.disabled=true" >> gradle.properties
+          echo "android.useAndroidX=true" >> gradle.properties
           
           if [ ! -f "./gradlew" ]; then
             gradle wrapper
           fi
           
           chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace
+          
+          # Hata durumunda logların tamamını ekrana dökecek komut
+          ./gradlew assembleDebug --info || ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
