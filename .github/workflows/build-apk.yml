@@ -1,67 +1,38 @@
-name: Masa10 APK Build
+name: Build Android APK
 
 on:
-  workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ "main" ] # Projenin ana dalı (master veya main)
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      # 1. Projeyi GitHub runner'a çek
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      # 2. Java JDK Kurulumu (Android projeleri için genelde Java 17 idealdir)
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
+      # 3. Gradlew dosyasına Linux ortamında çalıştırma yetkisi ver
+      - name: Make Gradlew executable
+        run: chmod +x ./gradlew
 
-      - name: Install Android 17 SDK
-        run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+      # 4. Debug APK Oluştur (Proje kök dizininde gradlew olduğu için doğrudan çalışır)
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
 
-      - name: Set up Gradle 9.6.0
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.6.0'
-
-      - name: Extract Masa10 project
-        run: |
-          rm -rf masa10_v10_work
-          unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip
-          test -f masa10_v10_work/settings.gradle.kts
-          test -f masa10_v10_work/app/google-services.json
-
-      - name: Fix AGP 9 built-in Kotlin
-        run: |
-          sed -i '/id("org.jetbrains.kotlin.android")/d' masa10_v10_work/build.gradle.kts
-          sed -i '/id("org.jetbrains.kotlin.android")/d' masa10_v10_work/app/build.gradle.kts
-
-      - name: Verify compile SDK
-        run: |
-          grep "compileSdk" masa10_v10_work/app/build.gradle.kts
-          grep "targetSdk" masa10_v10_work/app/build.gradle.kts
-
-      - name: Build debug APK
-        working-directory: masa10_v10_work
-        run: |
-          gradle --no-daemon --stacktrace :app:assembleDebug
-
-      - name: Verify APK
-        run: |
-          test -f masa10_v10_work/app/build/outputs/apk/debug/app-debug.apk
-          ls -lh masa10_v10_work/app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Upload APK
+      # 5. Üretilen APK dosyasını GitHub Actions Artifacts olarak kaydet
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Masa10-debug-apk
-          path: masa10_v10_work/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          name: masa10-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
