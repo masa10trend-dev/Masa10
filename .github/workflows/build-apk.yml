@@ -18,21 +18,27 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build with Detailed Info
+      - name: Build from Correct Root Directory
         run: |
-          GRADLEW_FILE=$(find . -name "gradlew" | head -n 1)
-          if [ -n "$GRADLEW_FILE" ]; then
-            DIR=$(dirname "$GRADLEW_FILE")
-            echo "Çalışılan dizin: $DIR"
-            cd "$DIR"
-            chmod +x ./gradlew
-            ./gradlew assembleDebug --info || ./gradlew assembleDebug --stacktrace
-          else
-            echo "Gradlew bulunamadı, oluşturuluyor..."
-            gradle wrapper
-            chmod +x ./gradlew
-            ./gradlew assembleDebug --info || ./gradlew assembleDebug --stacktrace
+          # Doğrudan settings dosyasını arayıp projenin gerçek kalbine iniyoruz
+          SETTINGS_FILE=$(find . -name "settings.gradle.kts" -o -name "settings.gradle" | head -n 1)
+          
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "HATA: settings.gradle dosyası hiçbir yerde bulunamadı!"
+            exit 1
           fi
+          
+          DIR=$(dirname "$SETTINGS_FILE")
+          echo "Gerçek proje kök dizini: $DIR"
+          cd "$DIR"
+          
+          # Eğer bu dizinde gradlew yoksa hemen oluşturalım
+          if [ ! -f "./gradlew" ]; then
+            gradle wrapper
+          fi
+          
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
