@@ -18,21 +18,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # Proje klasörünü otomatik bulur, gradlew yoksa kurar ve Debug APK üretir
-      - name: Locate Project and Build APK
+      # Android manifest dosyasını bularak projenin tam yerini tespit eder ve build alır
+      - name: Universal Build Script
         run: |
-          SETTINGS_FILE=$(find . -name "settings.gradle.kts" | head -n 1)
-          if [ -z "$SETTINGS_FILE" ]; then
-            SETTINGS_FILE=$(find . -name "settings.gradle" | head -n 1)
-          fi
-          
-          if [ -z "$SETTINGS_FILE" ]; then
-            echo "HATA: Proje yapılandırma dosyası bulunamadı!"
+          MANIFEST=$(find . -name "AndroidManifest.xml" | head -n 1)
+          if [ -z "$MANIFEST" ]; then
+            echo "HATA: AndroidManifest.xml bulunamadı! Lütfen proje dosyalarını kontrol edin."
             exit 1
           fi
           
-          DIR=$(dirname "$SETTINGS_FILE")
-          echo "Proje dizini: $DIR"
+          # Manifest'in bulunduğu klasörden iki üst dizin projenin ana köküdür (app/src/main/...)
+          # Gradle dosyasının olduğu dizine geçiyoruz
+          DIR=$(dirname "$(dirname "$(dirname "$MANIFEST")")")
+          echo "Proje kök dizini tespit edildi: $DIR"
           cd "$DIR"
           
           if [ ! -f "./gradlew" ]; then
@@ -42,7 +40,6 @@ jobs:
           chmod +x ./gradlew
           ./gradlew assembleDebug
 
-      # Üretilen APK dosyasını bulup indirmeye hazır hale getirir
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
