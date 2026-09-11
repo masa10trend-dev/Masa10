@@ -207,7 +207,7 @@ jobs:
 
 
       # --------------------------------------------------
-      # 11. Gradle ile APK oluştur
+      # 11. Gradle Wrapper ile APK oluştur
       # --------------------------------------------------
       - name: APK oluştur
         working-directory: ${{ env.PROJECT_DIR }}
@@ -215,9 +215,9 @@ jobs:
         run: |
           set -eux
 
-          gradle --version
+          chmod +x gradlew
 
-          gradle \
+          ./gradlew \
             --no-daemon \
             --stacktrace \
             --info \
