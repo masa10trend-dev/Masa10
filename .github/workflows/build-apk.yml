@@ -18,21 +18,30 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Downgrade Gradle and Build
+      - name: Auto Fix and Build
         run: |
+          # 1. Zip dosyasını aç
           unzip -q Masa10_v10_Reklam_Paketleri_999_1999.zip -d unzipped_project
           cd unzipped_project
           
+          # 2. Hata veren tüm gradle/kts dosyalarındaki kotlin eklenti satırlarını kökten temizleyelim
+          find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i '/org.jetbrains.kotlin.android/d' {} +
+          find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i '/kotlin("android")/d' {} +
+          find . -type f \( -name "*.gradle" -o -name "*.kts" \) -exec sed -i '/id("com.android.application")/a \    kotlin("android") version "1.9.24" apply false' {} + || true
+          
+          # 3. Doğru dizine geçiş yap
           TARGET_FILE=$(find . -name "build.gradle*" -not -path "*/.*" | head -n 1)
           if [ -n "$TARGET_FILE" ]; then
             DIR=$(dirname "$TARGET_FILE")
             cd "$DIR"
           fi
           
-          # Hatanın kaynağı olan yeni Gradle kuralını atlamak için sürümü 8.0'a sabitliyoruz
-          gradle wrapper --gradle-version 8.0
+          # 4. Gradle Wrapper yoksa oluştur ve kararlı Gradle 8.5 sürümüne sabitle
+          gradle wrapper --gradle-version 8.5
           
           chmod +x ./gradlew
+          
+          # 5. Derlemeyi başlat
           ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK Artifact
