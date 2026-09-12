@@ -12,35 +12,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      # --------------------------------------------------
-      # 1. GitHub kodunu al
-      # --------------------------------------------------
-      - name: Checkout
+      - name: GitHub deposunu al
         uses: actions/checkout@v4
 
-
-      # --------------------------------------------------
-      # 2. Java 17
-      # --------------------------------------------------
-      - name: Java 17
+      - name: Java 17 kur
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-
-      # --------------------------------------------------
-      # 3. Android SDK
-      # --------------------------------------------------
-      - name: Android SDK
+      - name: Android SDK kur
         uses: android-actions/setup-android@v4
 
-
-      # --------------------------------------------------
-      # 4. Android SDK 37
-      # --------------------------------------------------
-      - name: Install Android SDK
+      - name: Android 37 ve Build Tools kur
         shell: bash
         run: |
           set -eux
@@ -48,7 +32,7 @@ jobs:
           yes | sdkmanager --licenses || true
 
           echo "Android SDK paketleri:"
-          sdkmanager --list | grep -E "platforms;android-37|build-tools;37|build-tools;36" | head -30 || true
+          sdkmanager --list | grep -E "platforms;android-37|build-tools;37|build-tools;36" | head -50 || true
 
           if sdkmanager --list | grep -q "platforms;android-37.0"; then
             echo "Android 37.0 bulundu."
@@ -57,7 +41,7 @@ jobs:
             echo "Android 37 bulundu."
             sdkmanager "platforms;android-37"
           else
-            echo "HATA: Android API 37 platformu bulunamadı."
+            echo "HATA: Android API 37 bulunamadı."
             exit 1
           fi
 
@@ -67,25 +51,28 @@ jobs:
             sdkmanager "build-tools;36.0.0"
           fi
 
+      - name: Gradle 9.6 kur
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
 
-      # --------------------------------------------------
-      # 5. Düzeltilmiş Masa10 ZIP'ini bul
-      # --------------------------------------------------
       - name: Masa10 ZIP dosyasını bul
         shell: bash
         run: |
           set -eux
 
-          echo "ZIP dosyaları:"
-          find . -maxdepth 2 -type f -iname "*.zip" -print
-
-          ZIP_FILE=$(find . -maxdepth 2 -type f \
-            \( -name "Masa10_v10_APK_Duzeltilmis.zip" \
-            -o -name "Masa10_v10_Reklam_Paketleri_999_1999.zip" \) \
+          ZIP_FILE=$(find . -type f -iname "*.zip" \
+            \
+              -name "Masa10_v10_APK_Duzeltilmis.zip" \
+              -o \
+              -name "Masa10_v10_Reklam_Paketleri_999_1999.zip" \
+            \
             -print -quit)
 
           if [ -z "$ZIP_FILE" ]; then
             echo "HATA: Masa10 ZIP dosyası bulunamadı!"
+            echo "Depodaki ZIP dosyaları:"
+            find . -type f -iname "*.zip" -print
             exit 1
           fi
 
@@ -94,11 +81,7 @@ jobs:
 
           echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
 
-
-      # --------------------------------------------------
-      # 6. ZIP'i aç
-      # --------------------------------------------------
-      - name: Masa10 projesini aç
+      - name: Masa10 projesini ZIP'ten çıkar
         shell: bash
         run: |
           set -eux
@@ -108,9 +91,6 @@ jobs:
 
           unzip -q "$ZIP_FILE" -d masa10_project
 
-          echo "Dosyalar:"
-          find masa10_project -maxdepth 4 -type f | head -100
-
           SETTINGS_FILE=$(find masa10_project \
             -type f \
             -name "settings.gradle.kts" \
@@ -118,6 +98,7 @@ jobs:
 
           if [ -z "$SETTINGS_FILE" ]; then
             echo "HATA: settings.gradle.kts bulunamadı!"
+            find masa10_project -maxdepth 5 -type f -print
             exit 1
           fi
 
@@ -128,11 +109,7 @@ jobs:
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
-
-      # --------------------------------------------------
-      # 7. Çakışan Eklentileri ve Kotlin Sürümlerini Temizle
-      # --------------------------------------------------
-      - name: Gradle eklentilerini ve yapılandırmasını düzelt
+      - name: AGP 9 Kotlin uyumluluğunu düzelt
         shell: bash
         run: |
           set -eux
@@ -140,122 +117,26 @@ jobs:
           ROOT="$PROJECT_DIR/build.gradle.kts"
           APP="$PROJECT_DIR/app/build.gradle.kts"
 
-          echo "--- Orijinal Root Gradle ---"
-          cat "$ROOT" || true
+          echo "=== ROOT BUILD ==="
+          cat "$ROOT"
 
-          echo "--- Orijinal App Gradle ---"
-          cat "$APP" || true
+          echo "=== APP BUILD ==="
+          cat "$APP"
 
-          # Kotlin ve sorun çıkaran eklenti satırlarını güvenli şekilde temizle
-          sed -i '/id("org.jetbrains.kotlin.android")/d' "$ROOT" || true
-          sed -i '/id("org.jetbrains.kotlin.android")/d' "$APP" || true
-          sed -i '/kotlin("android")/d' "$ROOT" || true
-          sed -i '/kotlin("android")/d' "$APP" || true
+          # AGP 9 kendi Kotlin entegrasyonunu kullandığı için
+          # eski Kotlin Android plugin satırlarını kaldır.
+          sed -i '/id("org.jetbrains.kotlin.android")/d' "$ROOT"
+          sed -i '/id("org.jetbrains.kotlin.android")/d' "$APP"
 
-          echo "--- Düzeltilmiş Root Gradle ---"
-          cat "$ROOT" || true
+          echo "=== DÜZELTİLMİŞ ROOT BUILD ==="
+          cat "$ROOT"
 
-          echo "--- Düzeltilmiş App Gradle ---"
-          cat "$APP" || true
+          echo "=== DÜZELTİLMİŞ APP BUILD ==="
+          cat "$APP"
 
-
-      # --------------------------------------------------
-      # 8. SDK ayarlarını kontrol et
-      # --------------------------------------------------
-      - name: Android SDK ayarlarını kontrol et
+      - name: Masa10 Kotlin kaynaklarını otomatik düzelt
         shell: bash
         run: |
           set -eux
 
-          echo "compileSdk:"
-          grep -n "compileSdk" "$PROJECT_DIR/app/build.gradle.kts"
-
-          echo "targetSdk:"
-          grep -n "targetSdk" "$PROJECT_DIR/app/build.gradle.kts"
-
-          if grep -q "compileSdk = 36" "$PROJECT_DIR/app/build.gradle.kts"; then
-            echo "HATA: compileSdk 36 kullanılıyor."
-            exit 1
-          fi
-
-          if grep -q "compileSdk = 37" "$PROJECT_DIR/app/build.gradle.kts"; then
-            echo "compileSdk 37 OK."
-          fi
-
-
-      # --------------------------------------------------
-      # 9. Google Services dosyasını kontrol et
-      # --------------------------------------------------
-      - name: Firebase kontrolü
-        shell: bash
-        run: |
-          set -eux
-
-          test -f "$PROJECT_DIR/app/google-services.json"
-
-          echo "google-services.json bulundu."
-          grep -q '"package_name": "com.masa10.app"' \
-            "$PROJECT_DIR/app/google-services.json"
-
-          echo "Firebase Android paketi OK."
-
-
-      # --------------------------------------------------
-      # 10. Wrapper oluştur ve APK oluştur (Detaylı Log ile)
-      # --------------------------------------------------
-      - name: APK oluştur
-        working-directory: ${{ env.PROJECT_DIR }}
-        shell: bash
-        run: |
-          set -eux
-
-          if [ ! -f "gradlew" ]; then
-            echo "gradlew bulunamadı, oluşturuluyor..."
-            gradle wrapper --gradle-version 8.7
-          fi
-
-          chmod +x gradlew
-
-          ./gradlew \
-            --no-daemon \
-            --stacktrace \
-            --debug \
-            :app:assembleDebug
-
-
-      # --------------------------------------------------
-      # 11. APK'yı kontrol et
-      # --------------------------------------------------
-      - name: APK kontrol
-        shell: bash
-        run: |
-          set -eux
-
-          APK="$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk"
-
-          if [ ! -f "$APK" ]; then
-            echo "HATA: APK oluşmadı!"
-            echo "APK klasörü:"
-            find "$PROJECT_DIR/app/build/outputs" \
-              -type f \
-              -name "*.apk" \
-              -print || true
-            exit 1
-          fi
-
-          echo "======================================"
-          echo "APK BAŞARIYLA OLUŞTU"
-          echo "======================================"
-
-          ls -lh "$APK"
-
-
-      # --------------------------------------------------
-      # 12. APK'yı GitHub'dan indirilebilir yap
-      # --------------------------------------------------
-      - name: APK yükle
-        uses: actions/upload-artifact@v4
-        with:
-          name: Masa10-APK
-          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          MAIN="$PROJECT_DIR/app/src
