@@ -15,150 +15,399 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: GitHub kodunu al
+
+      # --------------------------------------------------
+      # 1 - GitHub kodunu indir
+      # --------------------------------------------------
+      - name: Kodu indir
         uses: actions/checkout@v4
 
+
+      # --------------------------------------------------
+      # 2 - Java 17
+      # --------------------------------------------------
       - name: Java 17 kur
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
+
+      # --------------------------------------------------
+      # 3 - Gradle 9.6
+      # --------------------------------------------------
       - name: Gradle 9.6 kur
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
 
-      - name: Android SDK kur
-        uses: android-actions/setup-android@v3
 
+      # --------------------------------------------------
+      # 4 - Android SDK yöneticisini bul
+      # --------------------------------------------------
+      - name: Android SDK yöneticisini bul
+        shell: bash
+        run: |
+          set -e
+
+          echo "ANDROID_HOME=${ANDROID_HOME:-}"
+          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-}"
+
+          SDKMANAGER=""
+
+          if command -v sdkmanager >/dev/null 2>&1; then
+            SDKMANAGER="$(command -v sdkmanager)"
+          fi
+
+          if [ -z "$SDKMANAGER" ] && [ -n "${ANDROID_HOME:-}" ]; then
+            for p in \
+              "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+              "$ANDROID_HOME/cmdline-tools/bin/sdkmanager"
+            do
+              if [ -f "$p" ]; then
+                SDKMANAGER="$p"
+                break
+              fi
+            done
+          fi
+
+          if [ -z "$SDKMANAGER" ] && [ -n "${ANDROID_SDK_ROOT:-}" ]; then
+            for p in \
+              "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" \
+              "$ANDROID_SDK_ROOT/cmdline-tools/bin/sdkmanager"
+            do
+              if [ -f "$p" ]; then
+                SDKMANAGER="$p"
+                break
+              fi
+            done
+          fi
+
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find /usr/local/lib/android /opt/android-sdk "$HOME" \
+              -type f \
+              -name sdkmanager \
+              -path '*/cmdline-tools/*/bin/sdkmanager' \
+              -print -quit 2>/dev/null || true)"
+          fi
+
+          if [ -z "$SDKMANAGER" ]; then
+            echo "HATA: sdkmanager bulunamadı."
+            echo "Android SDK dizinleri:"
+            ls -la /usr/local/lib/android 2>/dev/null || true
+            ls -la /opt/android-sdk 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "SDKMANAGER=$SDKMANAGER"
+          echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
+
+          SDK_ROOT="$(dirname "$(dirname "$(dirname "$SDKMANAGER")")")"
+
+          echo "SDK_ROOT=$SDK_ROOT"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+
+          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+
+
+      # --------------------------------------------------
+      # 5 - Android SDK 37
+      # --------------------------------------------------
       - name: Android SDK 37 kur
         shell: bash
         run: |
           set -e
 
-          yes | sdkmanager --licenses || true
+          echo "SDK: $SDKMANAGER"
 
-          sdkmanager "platform-tools"
-          sdkmanager "build-tools;36.0.0"
+          yes | "$SDKMANAGER" --licenses || true
 
-          if sdkmanager --list | grep -q "platforms;android-37.0"; then
-            sdkmanager "platforms;android-37.0"
+          "$SDKMANAGER" "platform-tools"
+          "$SDKMANAGER" "build-tools;36.0.0"
+
+          echo "Android 37 paketleri kontrol ediliyor..."
+
+          if "$SDKMANAGER" --list 2>/dev/null | grep -q "platforms;android-37.0"; then
+            echo "Android 37.0 bulundu."
+            "$SDKMANAGER" "platforms;android-37.0"
+          elif "$SDKMANAGER" --list 2>/dev/null | grep -q "platforms;android-37"; then
+            echo "Android 37 bulundu."
+            "$SDKMANAGER" "platforms;android-37"
           else
-            sdkmanager "platforms;android-37"
+            echo "HATA: Android 37 platformu bulunamadı."
+            "$SDKMANAGER" --list | head -n 200
+            exit 1
           fi
 
-      - name: ZIP dosyasını bul ve aç
+
+      # --------------------------------------------------
+      # 6 - ZIP dosyasını bul
+      # --------------------------------------------------
+      - name: Masa10 ZIP dosyasını bul
         shell: bash
         run: |
           set -e
 
-          ZIP_FILE=$(find . -type f -name "*.zip" -print -quit)
+          echo "Repository içeriği:"
+          find . -maxdepth 3 -type f -print | sort
+
+          ZIP_FILE="$(find . \
+            -type f \
+            -name '*.zip' \
+            -not -path './.git/*' \
+            -print \
+            -quit)"
 
           if [ -z "$ZIP_FILE" ]; then
-            echo "HATA: ZIP dosyası bulunamadı."
+            echo "HATA: Masa10 ZIP dosyası bulunamadı."
             exit 1
           fi
 
-          echo "Bulunan ZIP: $ZIP_FILE"
+          echo "Bulunan ZIP:"
+          echo "$ZIP_FILE"
 
+          echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
+
+
+      # --------------------------------------------------
+      # 7 - ZIP'i aç
+      # --------------------------------------------------
+      - name: Masa10 ZIP dosyasını aç
+        shell: bash
+        run: |
+          set -e
+
+          rm -rf _masa10_source
           mkdir -p _masa10_source
+
           unzip -q "$ZIP_FILE" -d _masa10_source
 
-          echo "ZIP içeriği:"
-          find _masa10_source -maxdepth 3 -type f | sort
+          echo "ZIP açıldı."
 
+          echo "İçerik:"
+          find _masa10_source -maxdepth 4 -type f -print | sort
+
+
+      # --------------------------------------------------
+      # 8 - Android projesini otomatik bul
+      # --------------------------------------------------
       - name: Android projesini bul
         shell: bash
         run: |
           set -e
 
-          PROJECT_DIR=$(find _masa10_source -type f -name "settings.gradle.kts" -print -quit | xargs -r dirname)
+          PROJECT_DIR="$(
+            find _masa10_source \
+              -type f \
+              -name 'settings.gradle.kts' \
+              -print \
+              -quit
+          )"
 
           if [ -z "$PROJECT_DIR" ]; then
             echo "HATA: settings.gradle.kts bulunamadı."
             exit 1
           fi
 
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Android projesi: $PROJECT_DIR"
+          PROJECT_DIR="$(dirname "$PROJECT_DIR")"
 
+          echo "Android projesi:"
+          echo "$PROJECT_DIR"
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+
+      # --------------------------------------------------
+      # 9 - Projeyi repository çalışma alanına taşı
+      # --------------------------------------------------
+      - name: Projeyi hazırla
+        shell: bash
+        run: |
+          set -e
+
+          rm -rf _build_project
+          mkdir -p _build_project
+
+          cp -a "$PROJECT_DIR"/. _build_project/
+
+          echo "Hazırlanan proje:"
+          find _build_project -maxdepth 3 -type f -print | sort
+
+
+      # --------------------------------------------------
+      # 10 - Masa10 kaynak kodundaki bilinen hataları düzelt
+      # --------------------------------------------------
       - name: Masa10 kaynak kodunu düzelt
         shell: bash
         run: |
           set -e
 
-          cd "$PROJECT_DIR"
+          cd _build_project
 
-          python3 - <<'PY'
+          python3 <<'PY'
           from pathlib import Path
 
-          # AGP 9 ile eski Kotlin Android plugin satırını kaldır
-          p = Path("build.gradle.kts")
-          s = p.read_text()
-          s = s.replace(
-              '    id("org.jetbrains.kotlin.android") version "2.4.20" apply false\n',
-              ''
+          # ---------------------------------------------
+          # Root build.gradle.kts
+          # AGP 9 ile Kotlin Android plugini kaldırılıyor
+          # ---------------------------------------------
+
+          root = Path("build.gradle.kts")
+
+          if root.exists():
+              text = root.read_text()
+
+              text = text.replace(
+                  '    id("org.jetbrains.kotlin.android") version "2.4.20" apply false\n',
+                  ''
+              )
+
+              root.write_text(text)
+
+
+          # ---------------------------------------------
+          # app/build.gradle.kts
+          # ---------------------------------------------
+
+          app_gradle = Path("app/build.gradle.kts")
+
+          if app_gradle.exists():
+              text = app_gradle.read_text()
+
+              text = text.replace(
+                  '    id("org.jetbrains.kotlin.android")\n',
+                  ''
+              )
+
+              app_gradle.write_text(text)
+
+
+          # ---------------------------------------------
+          # MainActivity.kt
+          # Billing nullable offerToken düzeltmesi
+          # ---------------------------------------------
+
+          main = Path(
+              "app/src/main/java/com/masa10/app/MainActivity.kt"
           )
-          p.write_text(s)
 
-          # App modülündeki Kotlin Android pluginini kaldır
-          p = Path("app/build.gradle.kts")
-          s = p.read_text()
-          s = s.replace(
-              '    id("org.jetbrains.kotlin.android")\n',
-              ''
-          )
-          p.write_text(s)
+          if main.exists():
+              text = main.read_text()
 
-          # Billing hatasını düzelt
-          p = Path("app/src/main/java/com/masa10/app/MainActivity.kt")
-          s = p.read_text()
+              text = text.replace(
+                  'private class AdBillingManager(',
+                  'class AdBillingManager('
+              )
 
-          s = s.replace(
-              'private class AdBillingManager(',
-              'class AdBillingManager('
-          )
+              text = text.replace(
+                  'if (offer != null) builder.setOfferToken(offer.offerToken)',
+                  'offer?.offerToken?.let { builder.setOfferToken(it) }'
+              )
 
-          s = s.replace(
-              'if (offer != null) builder.setOfferToken(offer.offerToken)',
-              'offer?.offerToken?.let { builder.setOfferToken(it) }'
-          )
+              main.write_text(text)
 
-          p.write_text(s)
+          print("Kaynak düzeltmeleri tamamlandı.")
           PY
 
-      - name: Proje dosyalarını kontrol et
+
+      # --------------------------------------------------
+      # 11 - Proje dosyalarını kontrol et
+      # --------------------------------------------------
+      - name: Projeyi kontrol et
         shell: bash
         run: |
           set -e
 
-          cd "$PROJECT_DIR"
+          cd _build_project
 
-          echo "=== settings.gradle.kts ==="
+          echo "================================="
+          echo "settings.gradle.kts"
+          echo "================================="
+
           cat settings.gradle.kts
 
-          echo "=== build.gradle.kts ==="
+          echo
+          echo "================================="
+          echo "build.gradle.kts"
+          echo "================================="
+
           cat build.gradle.kts
 
-          echo "=== app/build.gradle.kts ==="
+          echo
+          echo "================================="
+          echo "app/build.gradle.kts"
+          echo "================================="
+
           cat app/build.gradle.kts
 
+          echo
+          echo "================================="
+          echo "MainActivity kontrol"
+          echo "================================="
+
+          grep -n "AdBillingManager" \
+            app/src/main/java/com/masa10/app/MainActivity.kt || true
+
+
+      # --------------------------------------------------
+      # 12 - Masa10 APK oluştur
+      # --------------------------------------------------
       - name: Masa10 APK oluştur
         shell: bash
         run: |
           set -e
 
-          cd "$PROJECT_DIR"
+          cd _build_project
+
+          echo "Gradle sürümü:"
+          gradle --version
+
+          echo
+          echo "APK build başlıyor..."
 
           gradle :app:assembleDebug \
             --stacktrace \
             --no-daemon
 
+
+      # --------------------------------------------------
+      # 13 - APK'yı kontrol et
+      # --------------------------------------------------
+      - name: APK'yı kontrol et
+        shell: bash
+        run: |
+          set -e
+
+          echo "APK dosyaları:"
+
+          find _build_project/app/build/outputs \
+            -type f \
+            -name '*.apk' \
+            -print
+
+          APK_COUNT="$(
+            find _build_project/app/build/outputs \
+              -type f \
+              -name '*.apk' \
+              | wc -l
+          )"
+
+          if [ "$APK_COUNT" -eq 0 ]; then
+            echo "HATA: APK oluşturulamadı."
+            exit 1
+          fi
+
+          echo "APK başarıyla oluşturuldu."
+
+
+      # --------------------------------------------------
+      # 14 - APK'yı GitHub Artifacts'e yükle
+      # --------------------------------------------------
       - name: APK'yı yükle
         uses: actions/upload-artifact@v4
         with:
           name: Masa10-debug-APK
-          path: |
-            ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
+          path: _build_project/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
