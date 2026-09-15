@@ -6,47 +6,159 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Masa10 Debug APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Kodu indir
+      - name: GitHub kodunu al
         uses: actions/checkout@v4
 
-      - name: Java 17
+      - name: Java 17 kur
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Android SDK
+      - name: Gradle 9.6 kur
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Android SDK kur
         uses: android-actions/setup-android@v3
 
       - name: Android SDK 37 kur
+        shell: bash
         run: |
+          set -e
+
           yes | sdkmanager --licenses || true
+
           sdkmanager "platform-tools"
-          sdkmanager "platforms;android-37.0"
           sdkmanager "build-tools;36.0.0"
 
-      - name: Proje yapısını kontrol et
-        run: |
-          echo "=== ROOT ==="
-          ls -la
-          echo "=== APP ==="
-          ls -la app || true
+          if sdkmanager --list | grep -q "platforms;android-37.0"; then
+            sdkmanager "platforms;android-37.0"
+          else
+            sdkmanager "platforms;android-37"
+          fi
 
-      - name: Gradle ile APK oluştur
+      - name: ZIP dosyasını bul ve aç
+        shell: bash
         run: |
-          chmod +x gradlew
-          ./gradlew --version
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon
+          set -e
+
+          ZIP_FILE=$(find . -type f -name "*.zip" -print -quit)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "HATA: ZIP dosyası bulunamadı."
+            exit 1
+          fi
+
+          echo "Bulunan ZIP: $ZIP_FILE"
+
+          mkdir -p _masa10_source
+          unzip -q "$ZIP_FILE" -d _masa10_source
+
+          echo "ZIP içeriği:"
+          find _masa10_source -maxdepth 3 -type f | sort
+
+      - name: Android projesini bul
+        shell: bash
+        run: |
+          set -e
+
+          PROJECT_DIR=$(find _masa10_source -type f -name "settings.gradle.kts" -print -quit | xargs -r dirname)
+
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "HATA: settings.gradle.kts bulunamadı."
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Android projesi: $PROJECT_DIR"
+
+      - name: Masa10 kaynak kodunu düzelt
+        shell: bash
+        run: |
+          set -e
+
+          cd "$PROJECT_DIR"
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          # AGP 9 ile eski Kotlin Android plugin satırını kaldır
+          p = Path("build.gradle.kts")
+          s = p.read_text()
+          s = s.replace(
+              '    id("org.jetbrains.kotlin.android") version "2.4.20" apply false\n',
+              ''
+          )
+          p.write_text(s)
+
+          # App modülündeki Kotlin Android pluginini kaldır
+          p = Path("app/build.gradle.kts")
+          s = p.read_text()
+          s = s.replace(
+              '    id("org.jetbrains.kotlin.android")\n',
+              ''
+          )
+          p.write_text(s)
+
+          # Billing hatasını düzelt
+          p = Path("app/src/main/java/com/masa10/app/MainActivity.kt")
+          s = p.read_text()
+
+          s = s.replace(
+              'private class AdBillingManager(',
+              'class AdBillingManager('
+          )
+
+          s = s.replace(
+              'if (offer != null) builder.setOfferToken(offer.offerToken)',
+              'offer?.offerToken?.let { builder.setOfferToken(it) }'
+          )
+
+          p.write_text(s)
+          PY
+
+      - name: Proje dosyalarını kontrol et
+        shell: bash
+        run: |
+          set -e
+
+          cd "$PROJECT_DIR"
+
+          echo "=== settings.gradle.kts ==="
+          cat settings.gradle.kts
+
+          echo "=== build.gradle.kts ==="
+          cat build.gradle.kts
+
+          echo "=== app/build.gradle.kts ==="
+          cat app/build.gradle.kts
+
+      - name: Masa10 APK oluştur
+        shell: bash
+        run: |
+          set -e
+
+          cd "$PROJECT_DIR"
+
+          gradle :app:assembleDebug \
+            --stacktrace \
+            --no-daemon
 
       - name: APK'yı yükle
         uses: actions/upload-artifact@v4
         with:
           name: Masa10-debug-APK
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
